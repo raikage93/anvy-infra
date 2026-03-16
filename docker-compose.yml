@@ -1,0 +1,132 @@
+services:
+  # ===========================================
+  # Frontend (React + Vite)
+  # ===========================================
+  frontend:
+    build:
+      context: ./repos/anvy_frontend
+      dockerfile: ../../dockerfiles/Dockerfile.frontend
+    container_name: anvy-frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - anvy-network
+    depends_on:
+      - backend
+
+  # ===========================================
+  # Backend (Node.js API)
+  # ===========================================
+  backend:
+    build:
+      context: ./repos/anvy_backend
+      dockerfile: ../../dockerfiles/Dockerfile.backend
+    container_name: anvy-backend
+    restart: unless-stopped
+    volumes:
+      - uploads_data:/app/uploads
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=mysql
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-rootpassword}
+      - DB_NAME=${DB_NAME:-anvy_db}
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_dev_password}
+      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret_here}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+    networks:
+      - anvy-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ===========================================
+  # MySQL 8.0
+  # ===========================================
+  mysql:
+    image: mysql:8.0
+    container_name: anvy-mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-rootpassword}
+      - MYSQL_DATABASE=${DB_NAME:-anvy_db}
+      - MYSQL_USER=${DB_USER_NON_ROOT:-anvy_user}
+      - MYSQL_PASSWORD=${DB_USER_PASSWORD:-anvypassword}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./config/mysql/init:/docker-entrypoint-initdb.d
+    networks:
+      - anvy-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ===========================================
+  # Redis 7
+  # ===========================================
+  redis:
+    image: redis:7-alpine
+    container_name: anvy-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_dev_password}
+    volumes:
+      - redis_data:/data
+    networks:
+      - anvy-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_dev_password}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # ===========================================
+  # Nginx Reverse Proxy
+  # ===========================================
+  nginx:
+    image: nginx:alpine
+    container_name: anvy-nginx
+    restart: unless-stopped
+    volumes:
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./logs/nginx:/var/log/nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - anvy-network
+    depends_on:
+      - frontend
+      - backend
+
+# ===========================================
+# Networks
+# ===========================================
+networks:
+  anvy-network:
+    driver: bridge
+    name: anvy-network
+
+# ===========================================
+# Volumes
+# ===========================================
+volumes:
+  mysql_data:
+    driver: local
+    name: anvy-mysql-data
+  redis_data:
+    driver: local
+    name: anvy-redis-data
+  uploads_data:
+    driver: local
+    name: anvy-uploads-data

@@ -1,0 +1,6 @@
+[submodule "repos/anvy_backend"]
+	path = repos/anvy_backend
+	url = git@github.com:raikage93/anvy-backend.git
+[submodule "repos/anvy_frontend"]
+	path = repos/anvy_frontend
+	url = git@github.com:raikage93/anvy-frontend.git
