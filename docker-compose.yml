@@ -30,14 +30,14 @@ services:
     environment:
       - NODE_ENV=production
       - DB_HOST=mysql
-      - DB_PORT=${DB_PORT:-3306}
-      - DB_USER=${DB_USER:-root}
-      - DB_PASSWORD=${DB_PASSWORD:-rootpassword}
+      - DB_PORT=3306
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME:-anvy_db}
       - REDIS_HOST=redis
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_dev_password}
-      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret_here}
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
     networks:
       - anvy-network
@@ -55,17 +55,19 @@ services:
     container_name: anvy-mysql
     restart: unless-stopped
     environment:
-      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-rootpassword}
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
       - MYSQL_DATABASE=${DB_NAME:-anvy_db}
       - MYSQL_USER=${DB_USER_NON_ROOT:-anvy_user}
-      - MYSQL_PASSWORD=${DB_USER_PASSWORD:-anvypassword}
+      - MYSQL_PASSWORD=${DB_USER_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
       - ./config/mysql/init:/docker-entrypoint-initdb.d
+    expose:
+      - "3306"  # Internal only — NOT accessible from internet
     networks:
       - anvy-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-rootpassword}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -78,13 +80,15 @@ services:
     image: redis:7-alpine
     container_name: anvy-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_dev_password}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
+    expose:
+      - "6379"  # Internal only — NOT accessible from internet
     networks:
       - anvy-network
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_dev_password}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
