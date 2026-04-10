@@ -31,6 +31,10 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
       - ELASTICSEARCH_URL=${ELASTICSEARCH_URL:-http://elasticsearch:9200}
+      - CRON_SECRET=${CRON_SECRET}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - FOLLOW_UP_REMINDER_TIMEZONE=${FOLLOW_UP_REMINDER_TIMEZONE:-Asia/Ho_Chi_Minh}
     networks:
       - anvy-network
     depends_on:
@@ -38,6 +42,31 @@ services:
         condition: service_healthy
       elasticsearch:
         condition: service_started
+
+  # ===========================================
+  # Jenkins Scheduler
+  # ===========================================
+  jenkins:
+    build:
+      context: .
+      dockerfile: ./dockerfiles/Dockerfile.jenkins
+    container_name: anvy-jenkins
+    restart: unless-stopped
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+      - JENKINS_ADMIN_ID=${JENKINS_ADMIN_ID:-admin}
+      - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD}
+      - BACKEND_INTERNAL_URL=http://backend:5000
+      - CRON_SECRET=${CRON_SECRET}
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    ports:
+      - "8081:8080"
+      - "50000:50000"
+    networks:
+      - anvy-network
+    depends_on:
+      - backend
 
   # ===========================================
   # PostgreSQL 16
@@ -120,3 +149,6 @@ volumes:
   elasticsearch_data:
     driver: local
     name: anvy-elasticsearch-data
+  jenkins_home:
+    driver: local
+    name: anvy-jenkins-home
