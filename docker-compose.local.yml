@@ -35,7 +35,9 @@ services:
       - CRON_SECRET=${CRON_SECRET}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - TELEGRAM_WEBHOOK_SECRET=${TELEGRAM_WEBHOOK_SECRET}
       - FOLLOW_UP_REMINDER_TIMEZONE=${FOLLOW_UP_REMINDER_TIMEZONE:-Asia/Ho_Chi_Minh}
+      - FOLLOW_UP_REMINDER_RESEND_HOURS=${FOLLOW_UP_REMINDER_RESEND_HOURS:-1}
     volumes:
       - ./repos/anvy_backend:/app
       - backend_node_modules:/app/node_modules
