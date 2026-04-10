@@ -30,11 +30,14 @@ services:
       - DB_NAME=${DB_NAME:-anvy_db}
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL:-http://elasticsearch:9200}
     networks:
       - anvy-network
     depends_on:
       postgres:
         condition: service_healthy
+      elasticsearch:
+        condition: service_started
 
   # ===========================================
   # PostgreSQL 16
@@ -59,6 +62,24 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  # ===========================================
+  # Elasticsearch
+  # ===========================================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+    container_name: anvy-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    expose:
+      - "9200"
+    networks:
+      - anvy-network
 
   # ===========================================
   # Nginx Reverse Proxy
@@ -96,3 +117,6 @@ volumes:
   postgres_data:
     driver: local
     name: anvy-postgres-data
+  elasticsearch_data:
+    driver: local
+    name: anvy-elasticsearch-data
